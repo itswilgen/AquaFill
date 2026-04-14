@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+:root {
+  --theme-accent: #185FA5;
+  --theme-accent-soft: #EBF4FF;
+  --theme-accent-border: #B5D4F4;
+  --theme-link: #0369a1;
+  --theme-page-bg: #f0f9ff;
+  --theme-page-border: #e0f2fe;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
