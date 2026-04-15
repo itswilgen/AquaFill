@@ -1,11 +1,14 @@
 const express = require('express');
-const router  = express.Router();
-const InventoryController = require('../controllers/inventoryController');
+const asyncHandler = require('../core/asyncHandler');
+const { controllers } = require('../container');
 
-router.get('/lowstock', InventoryController.getLowStock);
-router.get('/',         InventoryController.getAll);
-router.post('/',        InventoryController.create);
-router.put('/:id',      InventoryController.update);
-router.delete('/:id',   InventoryController.delete);
+const router = express.Router();
+const { inventoryController } = controllers;
+
+router.get('/lowstock', asyncHandler(inventoryController.getLowStock));
+router.get('/', asyncHandler(inventoryController.getAll));
+router.post('/', asyncHandler(inventoryController.create));
+router.put('/:id', asyncHandler(inventoryController.update));
+router.delete('/:id', asyncHandler(inventoryController.delete));
 
 module.exports = router;

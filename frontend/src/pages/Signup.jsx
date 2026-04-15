@@ -1,17 +1,15 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../services/api';
+import { Link } from 'react-router-dom';
 import { useWindowSize } from '../hooks/useWindowSize';
 import { signInWithGoogle } from '../config/firebase';
-import { googleAuth } from '../services/api';
+import { useAuthController } from '../features/auth/controllers/useAuthController';
 
 export default function Signup() {
-  const navigate  = useNavigate();
   const { isMobile } = useWindowSize();
+  const { loading, clearError, registerCustomer, loginWithGoogleProfile } = useAuthController();
   const [step,        setStep]       = useState(1);
   const [form,        setForm]       = useState({ name: '', username: '', phone: '', address: '', password: '', confirm: '' });
   const [error,       setError]      = useState('');
-  const [loading,     setLoading]    = useState(false);
   const [mounted,     setMounted]    = useState(false);
   const [showPass,    setShowPass]   = useState(false);
   const [showConfirm, setShowConfirm]= useState(false);
@@ -20,6 +18,7 @@ export default function Signup() {
 
   function nextStep(e) {
     e.preventDefault();
+    clearError();
     const name = form.name.trim();
     const username = form.username.trim();
     const address = form.address.trim();
@@ -52,15 +51,12 @@ export default function Signup() {
     }
     if (form.password !== form.confirm) return setError('Passwords do not match');
     if (form.password.length < 6)       return setError('Password must be at least 6 characters');
-    setLoading(true);
+    clearError();
     setError('');
     try {
-      await register(payload);
-      navigate('/login');
+      await registerCustomer(payload, { redirectTo: '/login' });
     } catch (err) {
-      setError(err.response?.data?.message || 'Signup failed. Please try again.');
-    } finally {
-      setLoading(false);
+      setError(err.message || 'Signup failed. Please try again.');
     }
   }
 
@@ -68,25 +64,18 @@ export default function Signup() {
 
 
   async function handleGoogleLogin() {
+    clearError();
+    setError('');
     try {
       const googleUser = await signInWithGoogle();
-      const res = await googleAuth({
+      await loginWithGoogleProfile({
         uid:      googleUser.uid,
         email:    googleUser.email,
         name:     googleUser.displayName,
         photoURL: googleUser.photoURL,
       });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user',  JSON.stringify(res.data.user));
-      if (res.data.user.role === 'admin' || res.data.user.role === 'staff') {
-        navigate('/dashboard');
-      } else if (res.data.user.role === 'rider') {
-        navigate('/rider/dashboard');
-      } else {
-        navigate('/customer/dashboard');
-      }
     } catch (err) {
-      setError('Google login failed. Please try again.');
+      setError(err.message || 'Google login failed. Please try again.');
     }
   }
   return (

@@ -35,11 +35,20 @@ function Animate({ children, delay = 0, direction = 'up' }) {
   );
 }
 
+const HERO_SLIDES = [
+  { src: '/images/Img_3.webp', alt: 'Purified water gallon ready for delivery' },
+  { src: '/images/Img_2.jpg',  alt: 'Fresh water containers arranged for dispatch' },
+  { src: '/images/Img_1.jpg',  alt: 'AquaFill water delivery service in action' },
+];
+
 export default function Landing() {
   const { isMobile, isTablet } = useWindowSize();
   const [menuOpen,   setMenuOpen]   = useState(false);
   const [scrolled,   setScrolled]   = useState(false);
   const [activeLink, setActiveLink] = useState('home');
+  const [activeSlide, setActiveSlide] = useState(0);
+  const [previousSlide, setPreviousSlide] = useState(null);
+  const [slideDirection, setSlideDirection] = useState(1);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -48,25 +57,49 @@ export default function Landing() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  useEffect(() => {
-    const sections = ['home', 'features', 'pricing', 'how', 'contact'];
-    const onScroll = () => {
-      for (const id of [...sections].reverse()) {
-        const el = document.getElementById(id);
-        if (el && window.scrollY >= el.offsetTop - 100) {
-          setActiveLink(id);
-          break;
-        }
-      }
-    };
-    window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
   function scrollTo(id) {
     document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
+    setActiveLink(id);
     setMenuOpen(false);
   }
+
+  function goToSlide(nextIndex, direction = 1) {
+    if (nextIndex === activeSlide) return;
+    setPreviousSlide(activeSlide);
+    setSlideDirection(direction);
+    setActiveSlide(nextIndex);
+  }
+
+  function nextSlide() {
+    goToSlide((activeSlide + 1) % HERO_SLIDES.length, 1);
+  }
+
+  function prevSlide() {
+    goToSlide((activeSlide - 1 + HERO_SLIDES.length) % HERO_SLIDES.length, -1);
+  }
+
+  function jumpToSlide(nextIndex) {
+    if (nextIndex === activeSlide) return;
+    const total = HERO_SLIDES.length;
+    const forward = (nextIndex - activeSlide + total) % total;
+    const backward = (activeSlide - nextIndex + total) % total;
+    goToSlide(nextIndex, forward <= backward ? 1 : -1);
+  }
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setPreviousSlide(activeSlide);
+      setSlideDirection(1);
+      setActiveSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [activeSlide]);
+
+  useEffect(() => {
+    if (previousSlide === null) return;
+    const cleanup = setTimeout(() => setPreviousSlide(null), 700);
+    return () => clearTimeout(cleanup);
+  }, [previousSlide, activeSlide]);
 
   const sectionPad = isMobile ? '48px 20px' : isTablet ? '64px 32px' : '80px 60px';
 
@@ -90,9 +123,6 @@ export default function Landing() {
           100% { background-position:  200% center; }
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .nav-link-item:hover  { color: #0ea5e9 !important; }
-        .btn-ghost-hover:hover { background: #e0f2fe !important; }
-        .btn-solid-hover:hover { background: #0284c7 !important; transform: translateY(-1px); }
         .hero-cta:hover  { background: #0284c7 !important; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(14,165,233,0.35) !important; }
         .hero-sec:hover  { background: #e0f2fe !important; transform: translateY(-1px); }
         .feat-card:hover { transform: translateY(-4px); border-color: #bae6fd !important; }
@@ -100,6 +130,9 @@ export default function Landing() {
         .price-btn:hover  { opacity: 0.9; transform: translateY(-1px); }
         .step-card:hover .step-num { transform: scale(1.1); }
         .footer-link:hover { color: #e2e8f0 !important; }
+        .carousel-control:hover .carousel-control-inner { background: rgba(255,255,255,0.58) !important; transform: scale(1.05); }
+        .carousel-control:focus-visible .carousel-control-inner { outline: 3px solid rgba(255,255,255,0.7); outline-offset: 2px; }
+        .carousel-indicator:hover { background: rgba(255,255,255,0.78) !important; }
         * { transition-property: color, background-color, border-color, transform, opacity, box-shadow; transition-duration: 0.2s; transition-timing-function: ease; }
       `}</style>
 
@@ -118,8 +151,8 @@ export default function Landing() {
                 ...s.navLink,
                 color: activeLink === id ? '#0ea5e9' : '#64748b',
                 background: 'none', border: 'none', cursor: 'pointer',
-                borderBottom: activeLink === id ? '2px solid #0ea5e9' : '2px solid transparent',
-              }} className="nav-link-item">
+                borderBottom: '2px solid transparent',
+              }}>
                 {label}
               </button>
             ))}
@@ -129,8 +162,8 @@ export default function Landing() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           {!isMobile && (
             <>
-              <button style={s.btnGhost} className="btn-ghost-hover" onClick={() => navigate('/login')}>Login</button>
-              <button style={s.btnSolid} className="btn-solid-hover" onClick={() => navigate('/signup')}>Get started</button>
+              <button style={s.btnGhost} onClick={() => navigate('/login')}>Login</button>
+              <button style={s.btnSolid} onClick={() => navigate('/signup')}>Get started</button>
             </>
           )}
           {isMobile && (
@@ -161,7 +194,7 @@ export default function Landing() {
           {[['home','Home'],['features','Features'],['pricing','Pricing'],['how','How it works'],['contact','Contact']].map(([id, label]) => (
             <button key={id} onClick={() => scrollTo(id)} style={{
               display: 'block', width: '100%', textAlign: 'left',
-              padding: '13px 0', fontSize: 15, color: '#374151',
+              padding: '13px 0', fontSize: 15, color: activeLink === id ? '#0ea5e9' : '#374151',
               background: 'none', border: 'none',
               borderBottom: '1px solid #f1f5f9', cursor: 'pointer',
               fontWeight: 500,
@@ -258,20 +291,53 @@ export default function Landing() {
 
         {/* Hero image — hidden on mobile */}
         {!isMobile && (
-          <div style={{ animation: 'float 4s ease-in-out infinite' }}>
-            <Animate direction="right" delay={200}>
-              <div style={{
-                ...s.heroImg,
-                height: isTablet ? 360 : 480,
-              }}>
-                <img
-                  src="/images/Img_3.webp"
-                  alt="Water delivery"
-                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                />
+          <Animate direction="right" delay={200}>
+            <div style={{
+              ...s.heroCarousel,
+              height: isTablet ? 360 : 480,
+              animation: 'float 4s ease-in-out infinite',
+            }}>
+              <div style={s.carouselViewport}>
+                {HERO_SLIDES.map((slide, index) => {
+                  const isActive = index === activeSlide;
+                  const isPrevious = index === previousSlide;
+                  if (!isActive && !isPrevious) return null;
+
+                  return (
+                    <div
+                      key={slide.src}
+                      style={{
+                        ...s.carouselItem,
+                        opacity: isActive ? 1 : 0,
+                        transform: isActive ? 'translateX(0%)' : `translateX(${slideDirection === 1 ? '-26%' : '26%'})`,
+                        zIndex: isActive ? 2 : 1,
+                      }}
+                    >
+                      <img src={slide.src} alt={slide.alt} style={s.carouselImage} />
+                      <div style={s.carouselOverlay} />
+                    </div>
+                  );
+                })}
+
+                <div style={s.carouselIndicators}>
+                  {HERO_SLIDES.map((slide, index) => (
+                    <button
+                      key={`${slide.src}-indicator`}
+                      type="button"
+                      onClick={() => jumpToSlide(index)}
+                      aria-label={`Slide ${index + 1}`}
+                      aria-current={index === activeSlide}
+                      style={{
+                        ...s.carouselIndicator,
+                        ...(index === activeSlide ? s.carouselIndicatorActive : {}),
+                      }}
+                      className="carousel-indicator"
+                    />
+                  ))}
+                </div>
               </div>
-            </Animate>
-          </div>
+            </div>
+          </Animate>
         )}
       </section>
 
@@ -535,7 +601,16 @@ const s = {
   heroSec:          { padding: '13px 28px', fontSize: 14, fontWeight: 500, color: '#0369a1', background: 'none', border: '1.5px solid #bae6fd', borderRadius: 12, cursor: 'pointer' },
   heroNote:         { fontSize: 12, color: '#94a3b8', marginTop: 10, marginBottom: 28 },
   heroStats:        { display: 'flex' },
-  heroImg:          { borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 60px rgba(14,165,233,0.2)' },
+  heroCarousel:     { position: 'relative', borderRadius: 24, overflow: 'hidden', boxShadow: '0 24px 60px rgba(14,165,233,0.2)' },
+  carouselViewport: { position: 'relative', width: '100%', height: '100%' },
+  carouselItem:     { position: 'absolute', inset: 0, transition: 'transform 700ms ease-in-out, opacity 700ms ease-in-out' },
+  carouselImage:    { width: '100%', height: '100%', objectFit: 'cover' },
+  carouselOverlay:  { position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(12,26,46,0.04) 0%, rgba(12,26,46,0.26) 100%)' },
+  carouselIndicators:{ position: 'absolute', left: '50%', bottom: 20, transform: 'translateX(-50%)', zIndex: 4, display: 'flex', gap: 9 },
+  carouselIndicator:{ width: 11, height: 11, borderRadius: '50%', border: 'none', padding: 0, background: 'rgba(255,255,255,0.42)', cursor: 'pointer' },
+  carouselIndicatorActive: { background: '#fff' },
+  carouselControl:  { position: 'absolute', top: 0, bottom: 0, zIndex: 4, width: 56, display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'none', cursor: 'pointer' },
+  carouselControlInner: { width: 38, height: 38, borderRadius: '50%', background: 'rgba(255,255,255,0.36)', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(4px)' },
   section:          { background: '#fff' },
   grid3:            { display: 'grid' },
   grid4:            { display: 'grid' },

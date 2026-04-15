@@ -160,7 +160,6 @@ export default function Billing() {
             <table style={{ ...styles.table, minWidth: showExtraColumns ? 860 : (isNarrow ? 420 : 560) }}>
               <thead>
                 <tr style={styles.thead}>
-                  <th style={styles.th}>Bill ID</th>
                   <th style={styles.th}>Customer</th>
                   {showExtraColumns && <th style={styles.th}>Qty</th>}
                   <th style={styles.th}>Amount</th>
@@ -183,7 +182,6 @@ export default function Billing() {
                     className="admin-row"
                     style={animateIn ? { animation: `adminFadeIn 0.32s ease ${0.14 + (index * 0.03)}s both` } : undefined}
                   >
-                    <td style={styles.td}>{b.id}</td>
                     <td style={styles.td}>{b.customer_name}</td>
                     {showExtraColumns && <td style={styles.td}>{b.quantity}</td>}
                     <td style={styles.td}>₱{Number(b.amount).toFixed(2)}</td>

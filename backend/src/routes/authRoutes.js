@@ -1,9 +1,12 @@
 const express = require('express');
-const router  = express.Router();
-const AuthController = require('../controllers/authController');
+const asyncHandler = require('../core/asyncHandler');
+const { controllers } = require('../container');
 
-router.post('/login',        AuthController.login);
-router.post('/register',     AuthController.register);
-router.post('/google',       AuthController.googleLogin);
+const router = express.Router();
+const { authController } = controllers;
+
+router.post('/login', asyncHandler(authController.login));
+router.post('/register', asyncHandler(authController.register));
+router.post('/google', asyncHandler(authController.googleLogin));
 
 module.exports = router;

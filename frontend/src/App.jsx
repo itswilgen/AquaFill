@@ -15,41 +15,32 @@ import CustomerOrders    from './pages/customer/CustomerOrders';
 import CustomerBills     from './pages/customer/CustomerBills';
 import CustomerProfile   from './pages/customer/CustomerProfile';
 import WaterBubbles      from './components/WaterBubbles';
-
-function getStoredUser() {
-  try {
-    return JSON.parse(localStorage.getItem('user') || '{}');
-  } catch {
-    localStorage.removeItem('user');
-    return {};
-  }
-}
+import {
+  getRoleHomeRoute,
+  getStoredUserSafe,
+  isAuthenticated,
+} from './features/auth/controllers/routeGuards';
 
 function AdminRoute({ children }) {
-  const token = localStorage.getItem('token');
-  const user  = getStoredUser();
-  if (!token) return <Navigate to="/login" />;
+  const user = getStoredUserSafe();
+  if (!isAuthenticated()) return <Navigate to="/login" />;
   if (user.role !== 'admin' && user.role !== 'staff') {
-    if (user.role === 'rider') return <Navigate to="/rider/dashboard" />;
-    return <Navigate to="/customer/dashboard" />;
+    return <Navigate to={getRoleHomeRoute(user.role)} />;
   }
   return children;
 }
 
 function RiderRoute({ children }) {
-  const token = localStorage.getItem('token');
-  const user  = getStoredUser();
-  if (!token) return <Navigate to="/login" />;
+  const user = getStoredUserSafe();
+  if (!isAuthenticated()) return <Navigate to="/login" />;
   if (user.role !== 'rider') {
-    if (user.role === 'admin' || user.role === 'staff') return <Navigate to="/dashboard" />;
-    return <Navigate to="/customer/dashboard" />;
+    return <Navigate to={getRoleHomeRoute(user.role)} />;
   }
   return children;
 }
 
 function PrivateRoute({ children }) {
-  const token = localStorage.getItem('token');
-  return token ? children : <Navigate to="/login" />;
+  return isAuthenticated() ? children : <Navigate to="/login" />;
 }
 
 export default function App() {

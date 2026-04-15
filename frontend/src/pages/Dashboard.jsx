@@ -259,7 +259,6 @@ export default function Dashboard() {
                   <table style={{ ...styles.table, minWidth: tableMinWidth }}>
                     <thead>
                       <tr style={styles.thead}>
-                        <th style={styles.th}>Order</th>
                         <th style={styles.th}>Customer</th>
                         <th style={styles.th}>Qty</th>
                         <th style={styles.th}>Status</th>
@@ -277,7 +276,6 @@ export default function Dashboard() {
                           className="dash-row"
                           style={animateIn ? { animation: `dashFadeIn 0.35s ease ${0.2 + (index * 0.04)}s both` } : undefined}
                         >
-                          <td style={styles.td}>#{order.id}</td>
                           <td style={styles.td}>{order.customer_name || `Customer #${order.customer_id}`}</td>
                           <td style={styles.td}>{order.quantity}</td>
                           <td style={styles.td}><StatusBadge status={order.status} /></td>

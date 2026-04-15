@@ -1,19 +1,15 @@
 const express = require('express');
-const router  = express.Router();
-const CustomerController = require('../controllers/customerController');
+const asyncHandler = require('../core/asyncHandler');
+const { controllers } = require('../container');
 
-// GET    /api/customers         — get all customers
-// GET    /api/customers/search  — search customers
-// GET    /api/customers/:id     — get one customer
-// POST   /api/customers         — create customer
-// PUT    /api/customers/:id     — update customer
-// DELETE /api/customers/:id     — delete customer
+const router = express.Router();
+const { customerController } = controllers;
 
-router.get('/search',  CustomerController.search);
-router.get('/',        CustomerController.getAll);
-router.get('/:id',     CustomerController.getById);
-router.post('/',       CustomerController.create);
-router.put('/:id',     CustomerController.update);
-router.delete('/:id',  CustomerController.delete);
+router.get('/search', asyncHandler(customerController.search));
+router.get('/', asyncHandler(customerController.getAll));
+router.get('/:id', asyncHandler(customerController.getById));
+router.post('/', asyncHandler(customerController.create));
+router.put('/:id', asyncHandler(customerController.update));
+router.delete('/:id', asyncHandler(customerController.delete));
 
 module.exports = router;

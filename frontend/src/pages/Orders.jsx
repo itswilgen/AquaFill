@@ -179,7 +179,6 @@ export default function Orders() {
             <table style={{ ...styles.table, minWidth: showDateColumns ? 760 : (isNarrow ? 420 : 560) }}>
               <thead>
                 <tr style={styles.thead}>
-                  <th style={styles.th}>Order</th>
                   <th style={styles.th}>Customer</th>
                   <th style={styles.th}>Quantity</th>
                   <th style={styles.th}>Status</th>
@@ -199,7 +198,6 @@ export default function Orders() {
                     className="admin-row"
                     style={animateIn ? { animation: `adminFadeIn 0.32s ease ${0.12 + (index * 0.03)}s both` } : undefined}
                   >
-                    <td style={styles.td}>#{order.id}</td>
                     <td style={styles.td}>{order.customer_name || `Customer #${order.customer_id}`}</td>
                     <td style={styles.td}>{order.quantity}</td>
                     <td style={styles.td}><StatusBadge status={order.status} /></td>

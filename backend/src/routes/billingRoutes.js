@@ -1,10 +1,13 @@
 const express = require('express');
-const router  = express.Router();
-const BillingController = require('../controllers/billingController');
+const asyncHandler = require('../core/asyncHandler');
+const { controllers } = require('../container');
 
-router.get('/',                      BillingController.getAll);
-router.get('/summary',               BillingController.getSummary);
-router.put('/:id/pay',               BillingController.markPaid);
-router.delete('/:id',                BillingController.delete);
+const router = express.Router();
+const { billingController } = controllers;
+
+router.get('/', asyncHandler(billingController.getAll));
+router.get('/summary', asyncHandler(billingController.getSummary));
+router.put('/:id/pay', asyncHandler(billingController.markPaid));
+router.delete('/:id', asyncHandler(billingController.delete));
 
 module.exports = router;

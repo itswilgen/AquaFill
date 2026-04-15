@@ -191,7 +191,6 @@ export default function CustomerBills() {
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
-                <th style={s.th}>Order #</th>
                 <th style={s.th}>Qty</th>
                 <th style={s.th}>Amount</th>
                 <th style={s.th}>Status</th>
@@ -202,7 +201,6 @@ export default function CustomerBills() {
             <tbody>
               {orders.map((o) => (
                 <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={s.td}>#{o.id}</td>
                   <td style={s.td}>{o.quantity}</td>
                   <td style={s.td}>P{Number(o.amount || 0).toFixed(2)}</td>
                   <td style={s.td}>

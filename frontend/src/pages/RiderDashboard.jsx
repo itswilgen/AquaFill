@@ -223,7 +223,7 @@ export default function RiderDashboard() {
                     const directionsUrl = buildDirectionsUrl(address);
                     return (
                       <tr key={order.id}>
-                        <td style={s.td}>#{order.id}</td>
+                        <td style={s.td}>{order.id}</td>
                         <td style={s.td}>
                           <div style={s.customerName}>{order.customer_name}</div>
                           {phone ? (

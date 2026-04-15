@@ -1,63 +1,40 @@
-const Customer = require('../models/Customer');
+const BaseController = require('../core/BaseController');
 
-class CustomerController {
-  static async getAll(req, res) {
-    try {
-      const customers = await Customer.getAll();
-      res.json({ success: true, data: customers });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
+class CustomerController extends BaseController {
+  constructor({ customerService }) {
+    super();
+    this.customerService = customerService;
   }
 
-  static async getById(req, res) {
-    try {
-      const customer = await Customer.getById(req.params.id);
-      if (!customer) return res.status(404).json({ success: false, message: 'Customer not found' });
-      res.json({ success: true, data: customer });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  }
+  getAll = async (req, res) => {
+    const customers = await this.customerService.getAll();
+    return this.ok(res, customers);
+  };
 
-  static async create(req, res) {
-    try {
-      const { name, address, phone } = req.body;
-      if (!name) return res.status(400).json({ success: false, message: 'Name is required' });
-      const id = await Customer.create(name, address, phone);
-      res.status(201).json({ success: true, message: 'Customer created', id });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  }
+  getById = async (req, res) => {
+    const customer = await this.customerService.getById(req.params.id);
+    return this.ok(res, customer);
+  };
 
-  static async update(req, res) {
-    try {
-      const { name, address, phone } = req.body;
-      await Customer.update(req.params.id, name, address, phone);
-      res.json({ success: true, message: 'Customer updated' });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  }
+  create = async (req, res) => {
+    const id = await this.customerService.create(req.body || {});
+    return this.created(res, { message: 'Customer created', id });
+  };
 
-  static async delete(req, res) {
-    try {
-      await Customer.delete(req.params.id);
-      res.json({ success: true, message: 'Customer deleted' });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  }
+  update = async (req, res) => {
+    await this.customerService.update(req.params.id, req.body || {});
+    return this.message(res, 'Customer updated');
+  };
 
-  static async search(req, res) {
-    try {
-      const customers = await Customer.search(req.query.q);
-      res.json({ success: true, data: customers });
-    } catch (err) {
-      res.status(500).json({ success: false, message: err.message });
-    }
-  }
+  delete = async (req, res) => {
+    await this.customerService.delete(req.params.id);
+    return this.message(res, 'Customer deleted');
+  };
+
+  search = async (req, res) => {
+    const customers = await this.customerService.search(req.query.q);
+    return this.ok(res, customers);
+  };
 }
 
 module.exports = CustomerController;

@@ -88,7 +88,6 @@ export default function CustomerOrders() {
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
-                <th style={s.th}>Order #</th>
                 <th style={s.th}>Qty</th>
                 <th style={s.th}>Status</th>
                 <th style={s.th}>Amount</th>
@@ -100,7 +99,6 @@ export default function CustomerOrders() {
             <tbody>
               {orders.map(o => (
                 <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={s.td}>#{o.id}</td>
                   <td style={s.td}>{o.quantity}</td>
                   <td style={s.td}><StatusBadge status={o.status} /></td>
                   <td style={s.td}>₱{Number(o.amount || 0).toFixed(2)}</td>

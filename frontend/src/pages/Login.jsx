@@ -1,16 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { login } from '../services/api';
+import { Link } from 'react-router-dom';
 import { useWindowSize } from '../hooks/useWindowSize';
 import { signInWithGoogle } from '../config/firebase';
-import { googleAuth } from '../services/api';
+import { useAuthController } from '../features/auth/controllers/useAuthController';
 
 export default function Login() {
-  const navigate   = useNavigate();
   const { isMobile } = useWindowSize();
+  const { loading, error, clearError, loginWithPassword, loginWithGoogleProfile } = useAuthController();
   const [form,     setForm]    = useState({ username: '', password: '' });
-  const [error,    setError]   = useState('');
-  const [loading,  setLoading] = useState(false);
   const [mounted,  setMounted] = useState(false);
   const [showPass, setShowPass] = useState(false);
 
@@ -18,23 +15,10 @@ export default function Login() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-    setLoading(true);
-    setError('');
     try {
-      const res = await login(form);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user',  JSON.stringify(res.data.user));
-      if (res.data.user.role === 'admin' || res.data.user.role === 'staff') {
-        navigate('/dashboard');
-      } else if (res.data.user.role === 'rider') {
-        navigate('/rider/dashboard');
-      } else {
-        navigate('/customer/dashboard');
-      }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Invalid username or password');
-    } finally {
-      setLoading(false);
+      await loginWithPassword(form);
+    } catch {
+      // error is managed by controller state
     }
   }
 
@@ -42,23 +26,14 @@ export default function Login() {
   async function handleGoogleLogin() {
     try {
       const googleUser = await signInWithGoogle();
-      const res = await googleAuth({
+      await loginWithGoogleProfile({
         uid:      googleUser.uid,
         email:    googleUser.email,
         name:     googleUser.displayName,
         photoURL: googleUser.photoURL,
       });
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user',  JSON.stringify(res.data.user));
-      if (res.data.user.role === 'admin' || res.data.user.role === 'staff') {
-        navigate('/dashboard');
-      } else if (res.data.user.role === 'rider') {
-        navigate('/rider/dashboard');
-      } else {
-        navigate('/customer/dashboard');
-      }
-    } catch (err) {
-      setError('Google login failed. Please try again.');
+    } catch {
+      // error is managed by controller state
     }
   }
 
@@ -258,7 +233,10 @@ export default function Login() {
                 <input
                   style={s.input} className="inp"
                   value={form.username}
-                  onChange={e => setForm({ ...form, username: e.target.value })}
+                  onChange={e => {
+                    clearError();
+                    setForm({ ...form, username: e.target.value });
+                  }}
                   placeholder="Enter your username"
                   required
                 />
@@ -276,7 +254,10 @@ export default function Login() {
                   style={s.input} className="inp"
                   type={showPass ? 'text' : 'password'}
                   value={form.password}
-                  onChange={e => setForm({ ...form, password: e.target.value })}
+                  onChange={e => {
+                    clearError();
+                    setForm({ ...form, password: e.target.value });
+                  }}
                   placeholder="Enter your password"
                   required
                 />
