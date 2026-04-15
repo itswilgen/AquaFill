@@ -43,7 +43,7 @@ export default function CustomerBills() {
     method: 'gcash',
     reference_no: '',
     payer_name: '',
-    proof_image: '',
+    proof_file: null,
     proof_filename: '',
   });
 
@@ -71,7 +71,7 @@ export default function CustomerBills() {
       method: 'gcash',
       reference_no: '',
       payer_name: user.name || user.username || '',
-      proof_image: '',
+      proof_file: null,
       proof_filename: '',
     });
     setError('');
@@ -87,7 +87,7 @@ export default function CustomerBills() {
   function handleProofChange(e) {
     const file = e.target.files?.[0];
     if (!file) {
-      setPaymentForm((prev) => ({ ...prev, proof_image: '', proof_filename: '' }));
+      setPaymentForm((prev) => ({ ...prev, proof_file: null, proof_filename: '' }));
       return;
     }
 
@@ -101,19 +101,12 @@ export default function CustomerBills() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      setPaymentForm((prev) => ({
-        ...prev,
-        proof_image: String(reader.result || ''),
-        proof_filename: file.name,
-      }));
-      setError('');
-    };
-    reader.onerror = () => {
-      setError('Failed to read screenshot file. Please try another image.');
-    };
-    reader.readAsDataURL(file);
+    setPaymentForm((prev) => ({
+      ...prev,
+      proof_file: file,
+      proof_filename: file.name,
+    }));
+    setError('');
   }
 
   async function handlePaySubmit(e) {
@@ -125,7 +118,7 @@ export default function CustomerBills() {
       return;
     }
 
-    if (!paymentForm.proof_image) {
+    if (!paymentForm.proof_file) {
       setError('Screenshot proof is required before you can submit.');
       return;
     }
@@ -134,13 +127,13 @@ export default function CustomerBills() {
       setPaying(true);
       setError('');
 
-      await payBill(selectedBill.bill_id, {
-        payment_method: paymentForm.method,
-        reference_no: paymentForm.reference_no.trim(),
-        payer_name: paymentForm.payer_name.trim(),
-        proof_image: paymentForm.proof_image,
-        proof_filename: paymentForm.proof_filename,
-      });
+      const payload = new FormData();
+      payload.append('payment_method', paymentForm.method);
+      payload.append('reference_no', paymentForm.reference_no.trim());
+      payload.append('payer_name', paymentForm.payer_name.trim());
+      payload.append('proof_file', paymentForm.proof_file);
+
+      await payBill(selectedBill.bill_id, payload);
 
       closePayModal();
       setSuccess(`Payment submitted via ${paymentChannels[paymentForm.method].label}.`);

@@ -3,6 +3,7 @@ const path = require('path');
 const AppError = require('../core/AppError');
 
 const ALLOWED_IMAGE_MIME = {
+  'image/jpg': 'jpg',
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
@@ -38,6 +39,26 @@ class PaymentProofStorageService {
     return { buffer, extension };
   }
 
+  parseUploadedFile(file) {
+    if (!file || !Buffer.isBuffer(file.buffer) || file.buffer.length === 0) {
+      return null;
+    }
+
+    const mimeType = String(file.mimetype || '').toLowerCase();
+    const extension = ALLOWED_IMAGE_MIME[mimeType];
+    if (!extension) return null;
+
+    if (file.buffer.length > MAX_PROOF_SIZE_BYTES) {
+      throw new AppError('Proof screenshot is too large. Max size is 5MB.', 400, 'VALIDATION_ERROR');
+    }
+
+    return {
+      buffer: file.buffer,
+      extension,
+      originalName: file.originalname,
+    };
+  }
+
   buildProofFilename({ billId, extension, originalName }) {
     const timestamp = Date.now();
     const cleanedOriginal = this.sanitizeText(originalName, 80)
@@ -63,6 +84,26 @@ class PaymentProofStorageService {
       billId,
       extension: parsed.extension,
       originalName: proofFilename,
+    });
+
+    const absolutePath = path.join(this.uploadsDir, fileName);
+    await fs.writeFile(absolutePath, parsed.buffer);
+
+    return `/uploads/payment-proofs/${fileName}`;
+  }
+
+  async saveUploadedFile({ billId, file }) {
+    const parsed = this.parseUploadedFile(file);
+    if (!parsed) {
+      throw new AppError('Invalid proof screenshot. Please upload a JPG, PNG, or WEBP image.', 400, 'VALIDATION_ERROR');
+    }
+
+    await fs.mkdir(this.uploadsDir, { recursive: true });
+
+    const fileName = this.buildProofFilename({
+      billId,
+      extension: parsed.extension,
+      originalName: parsed.originalName,
     });
 
     const absolutePath = path.join(this.uploadsDir, fileName);

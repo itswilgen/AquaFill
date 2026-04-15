@@ -12,7 +12,11 @@ class BillingController extends BaseController {
   };
 
   markPaid = async (req, res) => {
-    const result = await this.billingService.markPaid(req.params.id, req.body || {});
+    const payload = {
+      ...(req.body || {}),
+      ...(req.file ? { proof_file: req.file } : {}),
+    };
+    const result = await this.billingService.markPaid(req.params.id, payload);
     return this.message(res, result.message);
   };
 

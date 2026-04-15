@@ -58,20 +58,32 @@ class BillingService {
     const payerName = this.sanitizeText(body?.payer_name, 120);
     const proofImage = body?.proof_image;
     const proofFilename = body?.proof_filename;
+    const proofFile = body?.proof_file;
+
+    const saveProof = async () => {
+      if (proofFile) {
+        return this.paymentProofStorageService.saveUploadedFile({
+          billId,
+          file: proofFile,
+        });
+      }
+
+      return this.paymentProofStorageService.saveProofImage({
+        billId,
+        proofImage,
+        proofFilename,
+      });
+    };
 
     if (paymentMethod && this.isOnlinePaymentMethod(paymentMethod)) {
       if (!referenceNo) {
         throw new AppError('Reference number is required.', 400, 'VALIDATION_ERROR');
       }
-      if (!proofImage) {
+      if (!proofImage && !proofFile) {
         throw new AppError('Screenshot proof is required.', 400, 'VALIDATION_ERROR');
       }
 
-      const proofUrl = await this.paymentProofStorageService.saveProofImage({
-        billId,
-        proofImage,
-        proofFilename,
-      });
+      const proofUrl = await saveProof();
 
       await this.paymentProofRepository.saveForBill({
         billId,
@@ -80,12 +92,8 @@ class BillingService {
         payerName,
         proofUrl,
       });
-    } else if (paymentMethod && proofImage) {
-      const proofUrl = await this.paymentProofStorageService.saveProofImage({
-        billId,
-        proofImage,
-        proofFilename,
-      });
+    } else if (paymentMethod && (proofImage || proofFile)) {
+      const proofUrl = await saveProof();
 
       await this.paymentProofRepository.saveForBill({
         billId,
