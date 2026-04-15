@@ -8,7 +8,14 @@ import { Toast } from '../components/Toast';
 import { useWindowSize } from '../hooks/useWindowSize';
 import { getBills, getBillSummary, markBillPaid, deleteBill } from '../services/api';
 
-const API_ORIGIN = 'http://localhost:3001';
+const API_BASE_URL = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/$/, '');
+const API_ORIGIN = (() => {
+  try {
+    return new URL(API_BASE_URL).origin;
+  } catch {
+    return 'http://localhost:3001';
+  }
+})();
 const PAGE_SIZE = 10;
 
 export default function Billing() {
@@ -203,7 +210,7 @@ export default function Billing() {
                       <td style={styles.td}>
                         {isOnlineMethod(b.payment_method) && b.proof_url ? (
                           <a
-                            href={`${API_ORIGIN}${b.proof_url}`}
+                            href={buildProofUrl(b.proof_url)}
                             target="_blank"
                             rel="noreferrer"
                             style={styles.proofLink}
@@ -315,4 +322,11 @@ function formatPaymentMethod(method) {
 function isOnlineMethod(method) {
   const key = String(method || '').toLowerCase();
   return key === 'gcash' || key === 'maya' || key === 'gotyme' || key === 'bank';
+}
+
+function buildProofUrl(proofUrl) {
+  const value = String(proofUrl || '').trim();
+  if (!value) return '#';
+  if (/^https?:\/\//i.test(value)) return value;
+  return `${API_ORIGIN}${value.startsWith('/') ? value : `/${value}`}`;
 }
