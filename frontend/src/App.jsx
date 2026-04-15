@@ -21,6 +21,13 @@ import {
   isAuthenticated,
 } from './features/auth/controllers/routeGuards';
 
+const buildRef = (
+  import.meta.env.VITE_APP_VERSION ||
+  import.meta.env.VERCEL_GIT_COMMIT_SHA ||
+  'local'
+).slice(0, 7);
+const deployEnv = import.meta.env.VERCEL_ENV || 'local';
+
 function AdminRoute({ children }) {
   const user = getStoredUserSafe();
   if (!isAuthenticated()) return <Navigate to="/login" />;
@@ -48,6 +55,9 @@ export default function App() {
     <BrowserRouter>
       <div style={styles.shell}>
         <WaterBubbles />
+        <div style={styles.buildBadge} title="Build identifier">
+          Build {buildRef} ({deployEnv})
+        </div>
         <div style={styles.routesLayer}>
           <Routes>
             <Route path="/"       element={<Landing />} />
@@ -78,4 +88,18 @@ export default function App() {
 const styles = {
   shell: { position: 'relative', minHeight: '100vh' },
   routesLayer: { position: 'relative', zIndex: 2 },
+  buildBadge: {
+    position: 'fixed',
+    right: 12,
+    bottom: 12,
+    zIndex: 50,
+    padding: '6px 10px',
+    borderRadius: 999,
+    fontSize: 12,
+    letterSpacing: 0.2,
+    background: 'rgba(15, 23, 42, 0.72)',
+    color: '#f8fafc',
+    border: '1px solid rgba(148, 163, 184, 0.3)',
+    backdropFilter: 'blur(4px)',
+  },
 };
