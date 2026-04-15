@@ -198,7 +198,6 @@ export default function RiderDashboard() {
             <table style={s.table}>
               <thead>
                 <tr style={s.thead}>
-                  <th style={s.th}>Order #</th>
                   <th style={s.th}>Customer</th>
                   <th style={s.th}>Location</th>
                   <th style={s.th}>Qty</th>
@@ -223,7 +222,6 @@ export default function RiderDashboard() {
                     const directionsUrl = buildDirectionsUrl(address);
                     return (
                       <tr key={order.id}>
-                        <td style={s.td}>{order.id}</td>
                         <td style={s.td}>
                           <div style={s.customerName}>{order.customer_name}</div>
                           {phone ? (
