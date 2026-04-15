@@ -35,7 +35,7 @@ const authService = new AuthService({
 
 const customerService = new CustomerService({ customerRepository });
 const inventoryService = new InventoryService({ inventoryRepository });
-const orderService = new OrderService({ orderRepository, billRepository });
+const orderService = new OrderService({ orderRepository, billRepository, paymentProofRepository });
 const billingService = new BillingService({
   billRepository,
   paymentProofRepository,

@@ -164,6 +164,7 @@ export default function Billing() {
                   {showExtraColumns && <th style={styles.th}>Qty</th>}
                   <th style={styles.th}>Amount</th>
                   <th style={styles.th}>Status</th>
+                  {showExtraColumns && <th style={styles.th}>Payment method</th>}
                   {showExtraColumns && <th style={styles.th}>Proof</th>}
                   {showExtraColumns && <th style={styles.th}>Paid at</th>}
                   <th style={styles.th}>Actions</th>
@@ -172,7 +173,7 @@ export default function Billing() {
               <tbody>
                 {bills.length === 0 ? (
                   <tr>
-                    <td colSpan={showExtraColumns ? 8 : 5} style={{ textAlign: 'center', padding: 32, color: '#aaa', fontSize: 13 }}>
+                    <td colSpan={showExtraColumns ? 8 : 4} style={{ textAlign: 'center', padding: 32, color: '#aaa', fontSize: 13 }}>
                       No bills found
                     </td>
                   </tr>
@@ -188,7 +189,19 @@ export default function Billing() {
                     <td style={styles.td}><StatusBadge status={b.status} /></td>
                     {showExtraColumns && (
                       <td style={styles.td}>
-                        {b.proof_url ? (
+                        <div style={styles.methodCell}>
+                          <span style={styles.methodBadge}>
+                            {formatPaymentMethod(b.payment_method)}
+                          </span>
+                          {isOnlineMethod(b.payment_method) && b.proof_url && (
+                            <span style={styles.methodSub}>Proof attached</span>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                    {showExtraColumns && (
+                      <td style={styles.td}>
+                        {isOnlineMethod(b.payment_method) && b.proof_url ? (
                           <a
                             href={`${API_ORIGIN}${b.proof_url}`}
                             target="_blank"
@@ -270,6 +283,9 @@ const styles = {
   actionsCell:{ whiteSpace: 'nowrap' },
   actionsMobile:{ display: 'flex', flexDirection: 'column', gap: 6 },
   actionBtnMobile: { width: '100%', marginRight: 0 },
+  methodCell: { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4 },
+  methodBadge: { display: 'inline-flex', alignItems: 'center', padding: '3px 8px', borderRadius: 999, border: '1px solid #dbeafe', background: '#eff6ff', color: '#1d4ed8', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px' },
+  methodSub:  { fontSize: 10, color: '#64748b', fontWeight: 600 },
   proofLink:  { color: 'var(--theme-link)', textDecoration: 'none', fontSize: 12, fontWeight: 600 },
   payBtn:     { padding: '4px 10px', fontSize: 11, marginRight: 6, background: '#EAF3DE', color: '#27500A', border: '1px solid #C0DD97', borderRadius: 5, cursor: 'pointer' },
   deleteBtn:  { padding: '4px 10px', fontSize: 11, background: '#FEE', color: '#c0392b', border: '1px solid #F7C1C1', borderRadius: 5, cursor: 'pointer' },
@@ -280,3 +296,23 @@ const styles = {
   pageBtnDisabled: { opacity: 0.5, cursor: 'not-allowed' },
   pageText: { fontSize: 12, color: '#334155', fontWeight: 600 },
 };
+
+function formatPaymentMethod(method) {
+  const key = String(method || '').toLowerCase();
+  if (!key) return '—';
+
+  const map = {
+    gcash: 'GCash',
+    maya: 'Maya',
+    gotyme: 'GoTyme',
+    bank: 'Bank',
+    cod: 'COD',
+  };
+
+  return map[key] || key.toUpperCase();
+}
+
+function isOnlineMethod(method) {
+  const key = String(method || '').toLowerCase();
+  return key === 'gcash' || key === 'maya' || key === 'gotyme' || key === 'bank';
+}

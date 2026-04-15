@@ -1,9 +1,10 @@
 const AppError = require('../core/AppError');
 
 class OrderService {
-  constructor({ orderRepository, billRepository }) {
+  constructor({ orderRepository, billRepository, paymentProofRepository }) {
     this.orderRepository = orderRepository;
     this.billRepository = billRepository;
+    this.paymentProofRepository = paymentProofRepository;
   }
 
   async getForRider() {
@@ -77,6 +78,13 @@ class OrderService {
     let codAutoPaid = false;
     if (codPaid && order.bill_id && String(order.bill_status || '').toLowerCase() !== 'paid') {
       await this.billRepository.markPaid(order.bill_id);
+      await this.paymentProofRepository.saveForBill({
+        billId: order.bill_id,
+        paymentMethod: 'cod',
+        referenceNo: 'COD',
+        payerName: 'Cash on Delivery',
+        proofUrl: 'COD',
+      });
       codAutoPaid = true;
     }
 

@@ -94,6 +94,14 @@ class BillingService {
         payerName,
         proofUrl,
       });
+    } else if (paymentMethod === 'cod') {
+      await this.paymentProofRepository.saveForBill({
+        billId,
+        paymentMethod: 'cod',
+        referenceNo: referenceNo || 'COD',
+        payerName: payerName || 'Cash on Delivery',
+        proofUrl: 'COD',
+      });
     }
 
     await this.billRepository.markPaid(billId);
