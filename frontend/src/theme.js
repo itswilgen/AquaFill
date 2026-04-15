@@ -24,7 +24,6 @@ export function getStoredTheme() {
     const saved = localStorage.getItem('ui_theme');
     if (saved && THEME_PALETTES[saved]) return saved;
   } catch {
-    // ignore localStorage access issues
   }
   return DEFAULT_THEME;
 }

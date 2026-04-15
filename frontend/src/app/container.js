@@ -15,8 +15,9 @@ import InventoryService from '../features/inventory/services/InventoryService';
 import BillingService from '../features/billing/services/BillingService';
 
 const authStore = new AuthStore();
+const apiBaseUrl = (import.meta.env.VITE_API_URL || 'http://localhost:3001/api').replace(/\/$/, '');
 const apiClient = new ApiClient({
-  baseURL: 'http://localhost:3001/api',
+  baseURL: apiBaseUrl,
   authStore,
 });
 
