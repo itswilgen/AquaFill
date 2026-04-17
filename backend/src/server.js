@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
-const path = require('path');
+const fs = require('fs/promises');
 
 const errorHandler = require('./middlewares/errorHandler');
 const notFound = require('./middlewares/notFound');
@@ -9,6 +9,11 @@ const AppError = require('./core/AppError');
 const securityHeaders = require('./middlewares/securityHeaders');
 const { createRateLimiter } = require('./middlewares/rateLimit');
 const { createAuthenticate } = require('./middlewares/authenticate');
+const {
+  uploadsRootDir,
+  legacyUploadsRootDir,
+  uploadsPublicBasePath,
+} = require('./config/uploads');
 
 dotenv.config();
 const { repositories, services } = require('./container');
@@ -87,14 +92,25 @@ app.use(express.json({
   },
 }));
 
-app.use('/uploads', express.static(path.join(__dirname, '../uploads'), {
+fs.mkdir(uploadsRootDir, { recursive: true }).catch((err) => {
+  // eslint-disable-next-line no-console
+  console.error('Failed to initialize uploads directory:', err.message);
+});
+
+const uploadStaticOptions = {
   dotfiles: 'deny',
   index: false,
   maxAge: '1h',
   setHeaders(res) {
     res.setHeader('Cache-Control', 'private, max-age=3600');
   },
-}));
+};
+
+app.use(uploadsPublicBasePath, express.static(uploadsRootDir, uploadStaticOptions));
+
+if (legacyUploadsRootDir !== uploadsRootDir) {
+  app.use(uploadsPublicBasePath, express.static(legacyUploadsRootDir, uploadStaticOptions));
+}
 
 const authenticate = createAuthenticate({
   userRepository: repositories.userRepository,

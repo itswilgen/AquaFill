@@ -1,6 +1,7 @@
 const fs = require('fs/promises');
 const path = require('path');
 const AppError = require('../core/AppError');
+const { paymentProofsDir, paymentProofPublicBasePath } = require('../config/uploads');
 
 const ALLOWED_IMAGE_MIME = {
   'image/jpg': 'jpg',
@@ -12,7 +13,7 @@ const ALLOWED_IMAGE_MIME = {
 const MAX_PROOF_SIZE_BYTES = 5 * 1024 * 1024;
 
 class PaymentProofStorageService {
-  constructor({ uploadsDir = path.join(__dirname, '../../uploads/payment-proofs') } = {}) {
+  constructor({ uploadsDir = paymentProofsDir } = {}) {
     this.uploadsDir = uploadsDir;
   }
 
@@ -89,7 +90,7 @@ class PaymentProofStorageService {
     const absolutePath = path.join(this.uploadsDir, fileName);
     await fs.writeFile(absolutePath, parsed.buffer);
 
-    return `/uploads/payment-proofs/${fileName}`;
+    return `${paymentProofPublicBasePath}/${fileName}`;
   }
 
   async saveUploadedFile({ billId, file }) {
@@ -109,7 +110,7 @@ class PaymentProofStorageService {
     const absolutePath = path.join(this.uploadsDir, fileName);
     await fs.writeFile(absolutePath, parsed.buffer);
 
-    return `/uploads/payment-proofs/${fileName}`;
+    return `${paymentProofPublicBasePath}/${fileName}`;
   }
 }
 
