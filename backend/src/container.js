@@ -46,6 +46,7 @@ const orderService = new OrderService({
   billRepository,
   paymentProofRepository,
   inventoryRepository,
+  customerRepository,
 });
 const billingService = new BillingService({
   billRepository,

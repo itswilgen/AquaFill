@@ -66,8 +66,17 @@ export default function CustomerProfile() {
 
   async function handleSaveProfile() {
     const fullName = (user.name || user.username || '').trim();
+    const trimmedAddress = customerAddress.trim();
     if (!fullName) {
       setError('Unable to update profile without a valid account name.');
+      return;
+    }
+    if (!trimmedAddress) {
+      setError('House address is required to place orders.');
+      return;
+    }
+    if (trimmedAddress.length < 10) {
+      setError('Please enter a complete house address (house no., street, barangay).');
       return;
     }
 
@@ -78,7 +87,7 @@ export default function CustomerProfile() {
 
       const payload = {
         name: fullName,
-        address: customerAddress || '',
+        address: trimmedAddress,
         phone: form.phone.trim(),
       };
       await updateMyCustomerProfile(payload);
@@ -137,6 +146,19 @@ export default function CustomerProfile() {
         <div style={s.infoGrid}>
           <InfoRow label="Username"  value={user.username || '—'} />
           <InfoRow label="Full name" value={user.name     || '—'} />
+          {editing ? (
+            <div style={s.fieldColumn}>
+              <span style={s.fieldLabel}>Delivery address</span>
+              <input
+                style={s.addressInput}
+                value={customerAddress}
+                onChange={(e) => setCustomerAddress(e.target.value)}
+                placeholder="House no., street, barangay, city"
+              />
+            </div>
+          ) : (
+            <InfoRow label="Delivery address" value={customerAddress || 'Not set'} />
+          )}
           {editing ? (
             <div style={s.fieldRow}>
               <span style={s.fieldLabel}>Phone</span>
@@ -218,8 +240,10 @@ const s = {
   role:      { fontSize: 12, color: '#94a3b8' },
   divider:   { height: 1, background: '#f1f5f9', margin: '16px 0' },
   infoGrid:  { },
+  fieldColumn: { display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 0', borderBottom: '1px solid #f1f5f9' },
   fieldRow:  { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #f1f5f9' },
   fieldLabel:{ color: '#94a3b8', fontWeight: 500, fontSize: 13 },
+  addressInput:{ width: '100%', padding: '8px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#0c1a2e' },
   phoneInput:{ width: 190, padding: '8px 10px', border: '1.5px solid #e2e8f0', borderRadius: 8, fontSize: 13, color: '#0c1a2e' },
   updateBtn: { width: '100%', padding: '11px 0', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer' },
   editActions:{ display: 'flex', gap: 10 },

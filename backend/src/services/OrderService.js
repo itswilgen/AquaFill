@@ -3,11 +3,18 @@ const AppError = require('../core/AppError');
 const ORDER_STATUSES = ['pending', 'delivered', 'cancelled'];
 
 class OrderService {
-  constructor({ orderRepository, billRepository, paymentProofRepository, inventoryRepository }) {
+  constructor({
+    orderRepository,
+    billRepository,
+    paymentProofRepository,
+    inventoryRepository,
+    customerRepository,
+  }) {
     this.orderRepository = orderRepository;
     this.billRepository = billRepository;
     this.paymentProofRepository = paymentProofRepository;
     this.inventoryRepository = inventoryRepository;
+    this.customerRepository = customerRepository;
   }
 
   async ensureSchema() {
@@ -85,6 +92,22 @@ class OrderService {
     return customerId;
   }
 
+  async ensureCustomerHasDeliveryAddress(customerId) {
+    const customer = await this.customerRepository.getById(customerId);
+    if (!customer) {
+      throw new AppError('Customer profile not found for this account', 404, 'CUSTOMER_NOT_FOUND');
+    }
+
+    const address = String(customer.address || '').trim();
+    if (!address || address.length < 10) {
+      throw new AppError(
+        'Please add your complete delivery address in your profile before placing an order.',
+        400,
+        'CUSTOMER_ADDRESS_REQUIRED'
+      );
+    }
+  }
+
   async getForRider() {
     return this.orderRepository.getForRiderQueue();
   }
@@ -148,6 +171,7 @@ class OrderService {
 
     if (role === 'customer') {
       customerId = this.requireCustomerIdFromUser(user);
+      await this.ensureCustomerHasDeliveryAddress(customerId);
 
       if (serverPrice === null) {
         throw new AppError(

@@ -199,6 +199,7 @@ export default function RiderDashboard() {
               <thead>
                 <tr style={s.thead}>
                   <th style={s.th}>Customer</th>
+                  <th style={s.th}>Product</th>
                   <th style={s.th}>Location</th>
                   <th style={s.th}>Qty</th>
                   <th style={s.th}>Order status</th>
@@ -216,6 +217,7 @@ export default function RiderDashboard() {
                   pagedOrders.map((order) => {
                     const completed = order.status === 'delivered' && order.bill_status === 'paid';
                     const address = order.customer_address || '';
+                    const productName = String(order.item_name || '').trim();
                     const phone = String(order.customer_phone || '').trim();
                     const callHref = buildCallHref(phone);
                     const mapUrl = buildMapUrl(address);
@@ -236,6 +238,9 @@ export default function RiderDashboard() {
                           ) : (
                             <div style={s.noPhone}>No phone</div>
                           )}
+                        </td>
+                        <td style={s.td}>
+                          <div style={s.productName}>{productName || 'Unknown product'}</div>
                         </td>
                         <td style={s.td}>
                           {address ? (
@@ -363,11 +368,12 @@ const s = {
   metricLabel: { fontSize: 12, color: '#6b7280', marginBottom: 6 },
   metricValue: { fontSize: 22, fontWeight: 700, color: '#0f172a' },
   tableWrap: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, overflow: 'auto' },
-  table: { width: '100%', borderCollapse: 'collapse', minWidth: 980 },
+  table: { width: '100%', borderCollapse: 'collapse', minWidth: 1080 },
   thead: { background: '#f8fafc' },
   th: { padding: '10px 12px', fontSize: 11, textAlign: 'left', color: '#6b7280', borderBottom: '1px solid #e5e7eb', fontWeight: 600 },
   td: { padding: '10px 12px', fontSize: 12, color: '#334155', borderBottom: '1px solid #f1f5f9' },
   customerName: { fontSize: 12, fontWeight: 600, color: '#0f172a' },
+  productName: { fontSize: 12, fontWeight: 600, color: '#1e293b' },
   customerContactRow: { display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' },
   customerPhone: { fontSize: 11, color: '#64748b' },
   noPhone: { fontSize: 11, color: '#94a3b8', marginTop: 4 },

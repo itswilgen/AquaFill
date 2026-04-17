@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import CustomerLayout from '../../components/CustomerLayout';
-import { getMyOrders, createCustomerOrder, getInventoryItems } from '../../services/api';
+import { getMyOrders, createCustomerOrder, getInventoryItems, getMyCustomerProfile } from '../../services/api';
 import { StatusBadge } from './CustomerDashboard';
 
 export default function CustomerOrders() {
+  const navigate = useNavigate();
   const [orders,    setOrders]    = useState([]);
   const [items,     setItems]     = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [loading,   setLoading]   = useState(true);
+  const [customerAddress, setCustomerAddress] = useState('');
   const [form,      setForm]      = useState({ item_id: '', quantity: '1', delivery_date: '' });
   const [submitting, setSubmitting] = useState(false);
   const [success,   setSuccess]   = useState('');
@@ -16,10 +19,14 @@ export default function CustomerOrders() {
   useEffect(() => {
     async function load() {
       try {
-        const ordersRes = await getMyOrders();
+        const [ordersRes, itemsRes, profileRes] = await Promise.all([
+          getMyOrders(),
+          getInventoryItems(),
+          getMyCustomerProfile(),
+        ]);
         setOrders(ordersRes.data.data || []);
-        const itemsRes = await getInventoryItems();
         setItems(itemsRes.data.data || []);
+        setCustomerAddress(String(profileRes?.data?.data?.address || '').trim());
       } catch { }
       finally { setLoading(false); }
     }
@@ -31,9 +38,19 @@ export default function CustomerOrders() {
   const quantityValue = Number.parseInt(form.quantity, 10);
   const safeQuantity = Number.isInteger(quantityValue) && quantityValue > 0 ? quantityValue : 0;
   const totalAmount  = pricePerUnit * safeQuantity;
+  const hasDeliveryAddress = customerAddress.length >= 10;
+
+  function openOrderModal() {
+    if (!hasDeliveryAddress) return;
+    setError('');
+    setShowModal(true);
+  }
 
   async function handleOrder(e) {
     e.preventDefault();
+    if (!hasDeliveryAddress) {
+      return setError('Please add your complete delivery address in your profile before placing an order.');
+    }
     if (!form.item_id) return setError('Please select a product.');
     if (!pricePerUnit) {
       return setError('Selected product has no configured customer price yet. Please contact support.');
@@ -55,8 +72,8 @@ export default function CustomerOrders() {
       const ordersRes = await getMyOrders();
       setOrders(ordersRes.data.data || []);
       setTimeout(() => setSuccess(''), 3000);
-    } catch {
-      setError('Failed to place order. Please try again.');
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Failed to place order. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -69,18 +86,44 @@ export default function CustomerOrders() {
           <h2 style={s.title}>My orders</h2>
           <p style={s.sub}>Track and manage your water deliveries</p>
         </div>
-        <button style={s.orderBtn} onClick={() => setShowModal(true)}>+ New order</button>
+        <button
+          style={{ ...s.orderBtn, ...(!hasDeliveryAddress ? s.orderBtnDisabled : {}) }}
+          onClick={openOrderModal}
+          disabled={!hasDeliveryAddress}
+        >
+          + New order
+        </button>
       </div>
 
       {success && <div style={s.successBox}>{success}</div>}
+      {!loading && !hasDeliveryAddress && (
+        <div style={s.addressAlert}>
+          <span style={s.addressAlertText}>
+            Add your complete delivery address in My profile to place an order.
+          </span>
+          <button style={s.addressAlertBtn} onClick={() => navigate('/customer/profile')}>
+            Add address
+          </button>
+        </div>
+      )}
 
       {loading ? (
         <div style={s.empty}>Loading your orders...</div>
       ) : orders.length === 0 ? (
         <div style={s.emptyCard}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📦</div>
-          <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 16 }}>No orders yet. Place your first order!</p>
-          <button style={s.orderBtn} onClick={() => setShowModal(true)}>Order now</button>
+          <p style={{ color: '#94a3b8', fontSize: 14, marginBottom: 16 }}>
+            {hasDeliveryAddress
+              ? 'No orders yet. Place your first order!'
+              : 'Add your delivery address first before placing your first order.'}
+          </p>
+          {hasDeliveryAddress ? (
+            <button style={s.orderBtn} onClick={openOrderModal}>Order now</button>
+          ) : (
+            <button style={s.addressAlertBtn} onClick={() => navigate('/customer/profile')}>
+              Add address
+            </button>
+          )}
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -114,7 +157,7 @@ export default function CustomerOrders() {
       )}
 
       {/* Order modal */}
-      {showModal && (
+      {showModal && hasDeliveryAddress && (
         <div style={s.overlay}>
           <div style={s.modal}>
             <div style={s.modalHeader}>
@@ -194,7 +237,11 @@ const s = {
   title:      { fontSize: 20, fontWeight: 800, color: '#0c1a2e', margin: 0 },
   sub:        { fontSize: 13, color: '#94a3b8', margin: '4px 0 0' },
   orderBtn:   { padding: '10px 20px', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 13, cursor: 'pointer' },
+  orderBtnDisabled: { background: '#cbd5e1', cursor: 'not-allowed' },
   successBox: { background: '#dcfce7', border: '1px solid #86efac', color: '#166534', padding: '10px 14px', borderRadius: 10, fontSize: 13, marginBottom: 16 },
+  addressAlert: { background: '#fff7ed', border: '1px solid #fdba74', color: '#9a3412', padding: '10px 12px', borderRadius: 10, fontSize: 13, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, flexWrap: 'wrap' },
+  addressAlertText: { fontSize: 13, color: '#9a3412' },
+  addressAlertBtn: { padding: '8px 12px', background: '#fff', color: '#c2410c', border: '1px solid #fdba74', borderRadius: 8, fontWeight: 600, fontSize: 12, cursor: 'pointer' },
   errorBox:   { background: '#fee2e2', border: '1px solid #fca5a5', color: '#991b1b', padding: '10px 14px', borderRadius: 10, fontSize: 13, marginBottom: 14 },
   empty:      { textAlign: 'center', padding: 40, color: '#94a3b8', fontSize: 14 },
   emptyCard:  { background: '#fff', borderRadius: 14, padding: 40, textAlign: 'center', border: '1px solid #e0f2fe' },

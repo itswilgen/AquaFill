@@ -142,7 +142,14 @@ export default function Landing() {
         padding: isMobile ? '14px 20px' : isTablet ? '14px 32px' : '14px 60px',
         boxShadow: scrolled ? '0 2px 20px rgba(0,0,0,0.08)' : 'none',
       }}>
-        <div style={s.logo}>Aqua<span style={{ color: '#0369a1' }}>Fill</span></div>
+        <button
+          type="button"
+          style={s.logoBtn}
+          onClick={() => scrollTo('home')}
+          aria-label="Go to home"
+        >
+          <span style={s.logo}>Aqua<span style={{ color: '#0369a1' }}>Fill</span></span>
+        </button>
 
         {!isMobile && (
           <div style={s.navLinks}>
@@ -587,6 +594,7 @@ function PriceCard({ name, price, desc, features, featured, onClick, isMobile })
 const s = {
   page:             { background: '#fff', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif', minHeight: '100vh' },
   nav:              { background: 'rgba(255,255,255,0.95)', backdropFilter: 'blur(10px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100, borderBottom: '1px solid #f1f5f9' },
+  logoBtn:          { background: 'none', border: 'none', padding: 0, cursor: 'pointer' },
   logo:             { fontSize: 22, fontWeight: 800, color: '#0ea5e9', letterSpacing: '-0.5px' },
   navLinks:         { display: 'flex', gap: 4 },
   navLink:          { fontSize: 13, color: '#64748b', fontWeight: 500, padding: '6px 12px', borderRadius: 6 },

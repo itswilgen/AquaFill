@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Layout from '../components/Layout';
 import PageHeader from '../components/PageHeader';
 import Modal from '../components/Modal';
@@ -10,6 +10,23 @@ import { getInventory, createItem, updateItem, deleteItem } from '../services/ap
 
 const PAGE_SIZE = 10;
 
+function formatStock(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return '0';
+  if (Number.isInteger(numeric)) return String(numeric);
+  return numeric.toFixed(2).replace(/\.?0+$/, '');
+}
+
+function summarizeItemNames(items, limit = 3) {
+  const names = items
+    .map((item) => String(item?.item_name || '').trim())
+    .filter(Boolean);
+
+  if (names.length === 0) return 'Inventory items';
+  if (names.length <= limit) return names.join(', ');
+  return `${names.slice(0, limit).join(', ')}, +${names.length - limit} more`;
+}
+
 export default function Inventory() {
   const { isMobile, isTablet, isNarrow } = useWindowSize();
   const [items,     setItems]     = useState([]);
@@ -20,27 +37,73 @@ export default function Inventory() {
   const { toast, showToast } = useToast();
   const [animateIn, setAnimateIn] = useState(false);
   const [page, setPage] = useState(1);
+  const hasSeededStatuses = useRef(false);
+  const previousStatusById = useRef(new Map());
   const showExtraColumns = !isMobile;
   const contentPadding = isMobile ? 16 : isTablet ? 20 : 28;
-  const totalPages = Math.max(1, Math.ceil(items.length / PAGE_SIZE));
+  const monitoringRows = useMemo(() => {
+    return items.map((item) => {
+      const quantity = Number(item.quantity);
+      const reorderLevel = Number(item.reorder_level);
+      const safeQuantity = Number.isFinite(quantity) ? quantity : 0;
+      const safeReorderLevel = Number.isFinite(reorderLevel) ? reorderLevel : 0;
+
+      let status = 'ok';
+      if (safeQuantity <= 0) status = 'out';
+      else if (safeReorderLevel > 0 && safeQuantity <= safeReorderLevel) status = 'low';
+
+      const baseline = safeReorderLevel > 0 ? safeReorderLevel : (safeQuantity > 0 ? safeQuantity : 1);
+      const percent = Math.min(100, Math.round((safeQuantity / baseline) * 100));
+
+      return {
+        ...item,
+        quantity: safeQuantity,
+        reorderLevel: safeReorderLevel,
+        status,
+        percent,
+      };
+    });
+  }, [items]);
+
+  const stockStats = useMemo(() => {
+    return monitoringRows.reduce((acc, item) => {
+      if (item.quantity > 0) acc.inStockCount += 1;
+      if (item.status === 'low') acc.lowCount += 1;
+      if (item.status === 'out') acc.outCount += 1;
+      return acc;
+    }, { inStockCount: 0, lowCount: 0, outCount: 0 });
+  }, [monitoringRows]);
+
+  const lowStockItems = useMemo(() => monitoringRows.filter((item) => item.status === 'low'), [monitoringRows]);
+  const outOfStockItems = useMemo(() => monitoringRows.filter((item) => item.status === 'out'), [monitoringRows]);
+
+  const totalPages = Math.max(1, Math.ceil(monitoringRows.length / PAGE_SIZE));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * PAGE_SIZE;
-  const pagedItems = items.slice(startIndex, startIndex + PAGE_SIZE);
+  const pagedItems = monitoringRows.slice(startIndex, startIndex + PAGE_SIZE);
 
-  async function load() {
-    setLoading(true);
+  async function load({ silent = false } = {}) {
+    if (!silent) setLoading(true);
     try {
       const res = await getInventory();
       setItems(res.data.data);
     } catch (error) {
-      showToast(error?.response?.data?.message || 'Failed to load inventory.', 'error');
+      if (!silent) {
+        showToast(error?.response?.data?.message || 'Failed to load inventory.', 'error');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
   useEffect(() => {
     void load();
+
+    const intervalId = setInterval(() => {
+      void load({ silent: true });
+    }, 15000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   useEffect(() => {
@@ -51,6 +114,45 @@ export default function Inventory() {
   useEffect(() => {
     setPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
+
+  useEffect(() => {
+    if (loading) return;
+
+    const nextStatusMap = new Map(
+      monitoringRows.map((item) => [String(item.id), item.status])
+    );
+
+    if (!hasSeededStatuses.current) {
+      previousStatusById.current = nextStatusMap;
+      hasSeededStatuses.current = true;
+      return;
+    }
+
+    const newlyLow = [];
+    const newlyOut = [];
+
+    for (const item of monitoringRows) {
+      const prevStatus = previousStatusById.current.get(String(item.id));
+      if (item.status === 'out' && prevStatus !== 'out') {
+        newlyOut.push(item);
+      } else if (item.status === 'low' && prevStatus !== 'low' && prevStatus !== 'out') {
+        newlyLow.push(item);
+      }
+    }
+
+    if (newlyOut.length > 0 || newlyLow.length > 0) {
+      const outLabel = newlyOut.length > 0
+        ? `Out: ${summarizeItemNames(newlyOut)}`
+        : '';
+      const lowLabel = newlyLow.length > 0
+        ? `Low: ${summarizeItemNames(newlyLow)}`
+        : '';
+      const message = [outLabel, lowLabel].filter(Boolean).join(' | ');
+      showToast(`Stock alert. ${message}`, newlyOut.length > 0 ? 'error' : 'info');
+    }
+
+    previousStatusById.current = nextStatusMap;
+  }, [loading, monitoringRows, showToast]);
 
   function openAdd() {
     setEditing(null);
@@ -145,6 +247,83 @@ export default function Inventory() {
           </button>
         </div>
 
+        {!loading && (
+          <>
+            {(outOfStockItems.length > 0 || lowStockItems.length > 0) && (
+              <div style={{ ...styles.alertStack, ...(animateIn ? { animation: 'adminFadeUp 0.4s ease both' } : {}) }}>
+                {outOfStockItems.length > 0 && (
+                  <div style={styles.alertDanger}>
+                    <strong>Out of stock:</strong> {summarizeItemNames(outOfStockItems)}
+                  </div>
+                )}
+                {lowStockItems.length > 0 && (
+                  <div style={styles.alertWarn}>
+                    <strong>Low stock:</strong> {summarizeItemNames(lowStockItems)}
+                  </div>
+                )}
+              </div>
+            )}
+
+            <div style={{ ...styles.monitoringGrid, ...(animateIn ? { animation: 'adminFadeUp 0.42s ease 0.04s both' } : {}) }}>
+              <div style={styles.monitorCard}>
+                <div style={styles.monitorLabel}>Items in stock</div>
+                <div style={styles.monitorValue}>{stockStats.inStockCount}</div>
+              </div>
+              <div style={styles.monitorCard}>
+                <div style={styles.monitorLabel}>Low-stock items</div>
+                <div style={styles.monitorValueWarn}>{stockStats.lowCount}</div>
+              </div>
+              <div style={styles.monitorCard}>
+                <div style={styles.monitorLabel}>Out-of-stock items</div>
+                <div style={styles.monitorValueDanger}>{stockStats.outCount}</div>
+              </div>
+            </div>
+
+            {monitoringRows.length > 0 && (
+              <div style={{ ...styles.monitorListWrap, ...(animateIn ? { animation: 'adminFadeUp 0.46s ease 0.1s both' } : {}) }}>
+                <div style={styles.monitorListTitle}>Stock monitoring (remaining per item)</div>
+                <div style={styles.monitorList}>
+                  {monitoringRows.map((item) => {
+                    const statusLabel = item.status === 'out'
+                      ? 'Out of stock'
+                      : item.status === 'low'
+                        ? 'Low stock'
+                        : 'Healthy';
+                    const fillWidth = item.quantity > 0 ? Math.max(8, item.percent) : 0;
+
+                    return (
+                      <div key={item.id} style={styles.monitorRow}>
+                        <div style={styles.monitorRowTop}>
+                          <span style={styles.monitorItemName}>{item.item_name}</span>
+                          <span style={styles.monitorItemQty}>
+                            {formatStock(item.quantity)} {item.unit}
+                          </span>
+                        </div>
+                        <div style={styles.monitorBarTrack}>
+                          <div
+                            style={{
+                              ...styles.monitorBarFill,
+                              ...(item.status === 'out'
+                                ? styles.monitorBarOut
+                                : item.status === 'low'
+                                  ? styles.monitorBarLow
+                                  : styles.monitorBarOk),
+                              width: `${fillWidth}%`,
+                            }}
+                          />
+                        </div>
+                        <div style={styles.monitorMeta}>
+                          Reorder level: {formatStock(item.reorderLevel)} {item.unit} | {statusLabel}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         {loading ? <Spinner /> : (
           <div
             className="admin-table-wrap"
@@ -154,7 +333,7 @@ export default function Inventory() {
               <thead>
                 <tr style={styles.thead}>
                   <th style={styles.th}>Item name</th>
-                  <th style={styles.th}>Quantity</th>
+                  <th style={styles.th}>Remaining stock</th>
                   <th style={styles.th}>Unit</th>
                   {showExtraColumns && <th style={styles.th}>Reorder level</th>}
                   <th style={styles.th}>Status</th>
@@ -170,7 +349,11 @@ export default function Inventory() {
                     </td>
                   </tr>
                 ) : pagedItems.map((item, index) => {
-                  const isLow = item.quantity <= item.reorder_level;
+                  const statusLabel = item.status === 'out'
+                    ? 'Out of stock'
+                    : item.status === 'low'
+                      ? 'Low stock'
+                      : 'OK';
                   return (
                     <tr
                       key={item.id}
@@ -178,12 +361,12 @@ export default function Inventory() {
                       style={animateIn ? { animation: `adminFadeIn 0.32s ease ${0.12 + (index * 0.03)}s both` } : undefined}
                     >
                       <td style={styles.td}>{item.item_name}</td>
-                      <td style={styles.td}>{item.quantity}</td>
+                      <td style={styles.td}>{formatStock(item.quantity)}</td>
                       <td style={styles.td}>{item.unit}</td>
-                      {showExtraColumns && <td style={styles.td}>{item.reorder_level}</td>}
+                      {showExtraColumns && <td style={styles.td}>{formatStock(item.reorderLevel)}</td>}
                       <td style={styles.td}>
-                        <span style={isLow ? styles.badgeLow : styles.badgeOk}>
-                          {isLow ? 'Low stock' : 'OK'}
+                        <span style={item.status === 'out' ? styles.badgeOut : item.status === 'low' ? styles.badgeLow : styles.badgeOk}>
+                          {statusLabel}
                         </span>
                       </td>
                       {showExtraColumns && <td style={styles.td}>{item.updated_at?.slice(0, 10)}</td>}
@@ -267,6 +450,28 @@ const styles = {
   content:   { padding: 28 },
   toolbar:   { marginBottom: 16 },
   addBtn:    { padding: '8px 16px', background: 'var(--theme-accent)', color: '#fff', border: 'none', borderRadius: 7, fontWeight: 500 },
+  alertStack: { display: 'grid', gap: 8, marginBottom: 10 },
+  alertWarn: { background: '#fffbeb', border: '1px solid #fcd34d', color: '#92400e', borderRadius: 8, padding: '10px 12px', fontSize: 12, lineHeight: 1.5 },
+  alertDanger: { background: '#fef2f2', border: '1px solid #fca5a5', color: '#991b1b', borderRadius: 8, padding: '10px 12px', fontSize: 12, lineHeight: 1.5 },
+  monitoringGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 10 },
+  monitorCard: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: '10px 12px' },
+  monitorLabel: { fontSize: 11, color: '#64748b', marginBottom: 4 },
+  monitorValue: { fontSize: 20, fontWeight: 700, color: '#0f172a' },
+  monitorValueWarn: { fontSize: 20, fontWeight: 700, color: '#b45309' },
+  monitorValueDanger: { fontSize: 20, fontWeight: 700, color: '#b91c1c' },
+  monitorListWrap: { background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, padding: 12, marginBottom: 12 },
+  monitorListTitle: { fontSize: 12, fontWeight: 600, color: '#334155', marginBottom: 10 },
+  monitorList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10 },
+  monitorRow: { border: '1px solid #e2e8f0', borderRadius: 8, padding: 10, background: '#f8fafc' },
+  monitorRowTop: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: 7 },
+  monitorItemName: { fontSize: 12, fontWeight: 600, color: '#0f172a' },
+  monitorItemQty: { fontSize: 11, fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' },
+  monitorBarTrack: { height: 7, width: '100%', borderRadius: 999, background: '#e2e8f0', overflow: 'hidden' },
+  monitorBarFill: { height: '100%', borderRadius: 999 },
+  monitorBarOk: { background: '#22c55e' },
+  monitorBarLow: { background: '#f59e0b' },
+  monitorBarOut: { background: '#ef4444' },
+  monitorMeta: { fontSize: 11, color: '#64748b', marginTop: 7 },
   tableWrap: { background: '#fff', border: '1px solid #e5e5e5', borderRadius: 8, overflow: 'auto' },
   table:     { width: '100%', borderCollapse: 'collapse' },
   thead:     { background: '#fafafa' },
@@ -277,6 +482,7 @@ const styles = {
   actionBtnMobile: { width: '100%', marginRight: 0 },
   badgeOk:   { background: '#EAF3DE', color: '#27500A', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 500 },
   badgeLow:  { background: '#FCEBEB', color: '#791F1F', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 500 },
+  badgeOut:  { background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 },
   editBtn:   { padding: '4px 10px', fontSize: 11, marginRight: 6, background: 'var(--theme-accent-soft)', color: 'var(--theme-accent)', border: '1px solid var(--theme-accent-border)', borderRadius: 5, cursor: 'pointer' },
   deleteBtn: { padding: '4px 10px', fontSize: 11, background: '#FEE', color: '#c0392b', border: '1px solid #F7C1C1', borderRadius: 5, cursor: 'pointer' },
   label:     { display: 'block', fontSize: 12, fontWeight: 500, color: '#555', marginBottom: 4 },
