@@ -7,6 +7,10 @@ export default class BillingRepository {
     return this.apiClient.get('/billing');
   }
 
+  getMine() {
+    return this.apiClient.get('/billing/me');
+  }
+
   getSummary() {
     return this.apiClient.get('/billing/summary');
   }

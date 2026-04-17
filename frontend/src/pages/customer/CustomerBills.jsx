@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import CustomerLayout from '../../components/CustomerLayout';
-import { getOrdersByCustomer, payBill, searchCustomers } from '../../services/api';
+import { getMyBills, payBill } from '../../services/api';
 import { StatusBadge } from './CustomerDashboard';
 
 const paymentChannels = {
@@ -49,12 +49,8 @@ export default function CustomerBills() {
 
   async function load() {
     try {
-      const res = await searchCustomers(user.name || user.username || '');
-      const customers = res.data.data;
-      if (customers.length > 0) {
-        const ordersRes = await getOrdersByCustomer(customers[0].id);
-        setOrders(ordersRes.data.data.filter((o) => o.amount));
-      }
+      const billsRes = await getMyBills();
+      setOrders((billsRes.data.data || []).filter((o) => o.amount));
     } catch {}
     finally {
       setLoading(false);

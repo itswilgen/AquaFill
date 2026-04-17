@@ -115,7 +115,7 @@ export default function CustomerDashboard() {
             <table style={s.table}>
               <thead>
                 <tr style={s.theadRow}>
-                  {['Order', 'Qty', 'Status', 'Amount', 'Bill', 'Date'].map((h) => (
+                  {['Product', 'Qty', 'Status', 'Amount', 'Bill', 'Date'].map((h) => (
                     <th key={h} style={s.th}>
                       {h}
                     </th>
@@ -125,7 +125,7 @@ export default function CustomerDashboard() {
               <tbody>
                 {orders.slice(0, 5).map((o) => (
                   <tr key={o.id}>
-                    <td style={s.td}>{o.id}</td>
+                    <td style={s.td}>{o.item_name || '—'}</td>
                     <td style={s.td}>{o.quantity}</td>
                     <td style={s.td}>
                       <StatusBadge status={o.status} />

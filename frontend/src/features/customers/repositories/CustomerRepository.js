@@ -7,6 +7,10 @@ export default class CustomerRepository {
     return this.apiClient.get('/customers');
   }
 
+  getMe() {
+    return this.apiClient.get('/customers/me');
+  }
+
   getById(id) {
     return this.apiClient.get(`/customers/${id}`);
   }
@@ -21,6 +25,10 @@ export default class CustomerRepository {
 
   update(id, payload) {
     return this.apiClient.put(`/customers/${id}`, payload);
+  }
+
+  updateMe(payload) {
+    return this.apiClient.put('/customers/me', payload);
   }
 
   delete(id) {

@@ -13,6 +13,14 @@ export default class OrderService {
     }
   }
 
+  async getMyOrders() {
+    try {
+      return await this.orderRepository.getMine();
+    } catch (err) {
+      throw toAppError(err, 'Failed to load your orders');
+    }
+  }
+
   async createOrder(payload) {
     try {
       return await this.orderRepository.create(payload);

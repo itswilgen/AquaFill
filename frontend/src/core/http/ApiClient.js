@@ -13,6 +13,16 @@ export default class ApiClient {
       }
       return config;
     });
+
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error?.response?.status === 401) {
+          this.authStore.clearSession();
+        }
+        return Promise.reject(error);
+      }
+    );
   }
 
   get(path, config) {

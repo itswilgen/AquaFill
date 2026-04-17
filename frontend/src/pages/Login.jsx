@@ -26,11 +26,11 @@ export default function Login() {
   async function handleGoogleLogin() {
     try {
       const googleUser = await signInWithGoogle();
+      const idToken = await googleUser.getIdToken();
       await loginWithGoogleProfile({
-        uid:      googleUser.uid,
-        email:    googleUser.email,
-        name:     googleUser.displayName,
-        photoURL: googleUser.photoURL,
+        id_token: idToken,
+        email: googleUser.email,
+        name: googleUser.displayName,
       });
     } catch {
       // error is managed by controller state

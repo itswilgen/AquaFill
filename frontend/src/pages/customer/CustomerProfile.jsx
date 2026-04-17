@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import CustomerLayout from '../../components/CustomerLayout';
-import { createCustomer, searchCustomers, updateCustomer } from '../../services/api';
+import { getMyCustomerProfile, updateMyCustomerProfile } from '../../services/api';
 
 export default function CustomerProfile() {
   const navigate = useNavigate();
@@ -12,7 +12,6 @@ export default function CustomerProfile() {
   const [success, setSuccess] = useState('');
   const [error, setError] = useState('');
   const [form, setForm] = useState({ phone: '' });
-  const [customerId, setCustomerId] = useState(null);
   const [customerAddress, setCustomerAddress] = useState('');
 
   function handleLogout() {
@@ -24,18 +23,10 @@ export default function CustomerProfile() {
   useEffect(() => {
     async function loadCustomerProfile() {
       try {
-        const query = user.name || user.username || '';
-        if (!query) return;
-
-        const res = await searchCustomers(query);
-        const customers = res.data.data || [];
-
-        if (customers.length > 0) {
-          const exact = customers.find(c => String(c.name || '').toLowerCase() === String(query).toLowerCase()) || customers[0];
-          setCustomerId(exact.id);
-          setCustomerAddress(exact.address || '');
-          setForm({ phone: exact.phone || '' });
-        }
+        const res = await getMyCustomerProfile();
+        const customer = res?.data?.data || {};
+        setCustomerAddress(customer.address || '');
+        setForm({ phone: customer.phone || '' });
       } catch {
         setForm({ phone: '' });
       }
@@ -90,15 +81,7 @@ export default function CustomerProfile() {
         address: customerAddress || '',
         phone: form.phone.trim(),
       };
-
-      if (customerId) {
-        await updateCustomer(customerId, payload);
-      } else {
-        const created = await createCustomer(payload);
-        if (created?.data?.id) {
-          setCustomerId(created.data.id);
-        }
-      }
+      await updateMyCustomerProfile(payload);
 
       const userKey = user.username || user.name || 'customer';
       if (profilePhoto) {

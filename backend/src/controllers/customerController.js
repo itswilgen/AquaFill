@@ -16,6 +16,11 @@ class CustomerController extends BaseController {
     return this.ok(res, customer);
   };
 
+  getMe = async (req, res) => {
+    const customer = await this.customerService.getBySessionUser(req.user);
+    return this.ok(res, customer);
+  };
+
   create = async (req, res) => {
     const id = await this.customerService.create(req.body || {});
     return this.created(res, { message: 'Customer created', id });
@@ -24,6 +29,11 @@ class CustomerController extends BaseController {
   update = async (req, res) => {
     await this.customerService.update(req.params.id, req.body || {});
     return this.message(res, 'Customer updated');
+  };
+
+  updateMe = async (req, res) => {
+    await this.customerService.updateBySessionUser(req.user, req.body || {});
+    return this.message(res, 'Customer profile updated');
   };
 
   delete = async (req, res) => {

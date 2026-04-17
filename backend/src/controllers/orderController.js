@@ -12,7 +12,12 @@ class OrderController extends BaseController {
   };
 
   getByCustomer = async (req, res) => {
-    const rows = await this.orderService.getByCustomer(req.params.customer_id);
+    const rows = await this.orderService.getByCustomer(req.params.customer_id, req.user);
+    return this.ok(res, rows);
+  };
+
+  getMine = async (req, res) => {
+    const rows = await this.orderService.getBySessionUser(req.user);
     return this.ok(res, rows);
   };
 
@@ -27,7 +32,7 @@ class OrderController extends BaseController {
   };
 
   create = async (req, res) => {
-    const orderId = await this.orderService.create(req.body || {});
+    const orderId = await this.orderService.create(req.body || {}, req.user);
     return this.created(res, { message: 'Order and bill created', orderId });
   };
 

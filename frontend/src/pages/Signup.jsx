@@ -50,7 +50,9 @@ export default function Signup() {
       return setError('Please enter a complete house address (house no., street, barangay).');
     }
     if (form.password !== form.confirm) return setError('Passwords do not match');
-    if (form.password.length < 6)       return setError('Password must be at least 6 characters');
+    if (!isStrongPassword(form.password)) {
+      return setError('Password must be 8+ chars with uppercase, lowercase, number, and special character.');
+    }
     clearError();
     setError('');
     try {
@@ -68,11 +70,11 @@ export default function Signup() {
     setError('');
     try {
       const googleUser = await signInWithGoogle();
+      const idToken = await googleUser.getIdToken();
       await loginWithGoogleProfile({
-        uid:      googleUser.uid,
-        email:    googleUser.email,
-        name:     googleUser.displayName,
-        photoURL: googleUser.photoURL,
+        id_token: idToken,
+        email: googleUser.email,
+        name: googleUser.displayName,
       });
     } catch (err) {
       setError(err.message || 'Google login failed. Please try again.');
@@ -464,20 +466,31 @@ function PasswordField({ label, value, show, onToggle, onChange, placeholder }) 
   );
 }
 
+function isStrongPassword(passwordValue) {
+  const password = String(passwordValue || '');
+  return password.length >= 8
+    && /[a-z]/.test(password)
+    && /[A-Z]/.test(password)
+    && /\d/.test(password)
+    && /[^A-Za-z0-9]/.test(password);
+}
+
 // ── Password strength ─────────────────────────────────────────
 function PasswordStrength({ password }) {
   const checks = [
-    { label: 'At least 6 characters', pass: password.length >= 6 },
-    { label: 'Contains a number',     pass: /\d/.test(password) },
+    { label: 'At least 8 characters', pass: password.length >= 8 },
+    { label: 'Contains lowercase',    pass: /[a-z]/.test(password) },
     { label: 'Contains uppercase',    pass: /[A-Z]/.test(password) },
+    { label: 'Contains a number',     pass: /\d/.test(password) },
+    { label: 'Contains special char', pass: /[^A-Za-z0-9]/.test(password) },
   ];
   const score  = checks.filter(c => c.pass).length;
-  const colors = ['#ef4444', '#f97316', '#22c55e'];
-  const labels = ['Weak', 'Fair', 'Strong'];
+  const colors = ['#ef4444', '#f97316', '#22c55e', '#16a34a', '#15803d'];
+  const labels = ['Very weak', 'Weak', 'Fair', 'Strong', 'Very strong'];
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-        {[0, 1, 2].map(i => (
+        {[0, 1, 2, 3, 4].map(i => (
           <div key={i} style={{ flex: 1, height: 4, borderRadius: 2, background: i < score ? colors[score - 1] : '#e2e8f0', transition: 'background 0.3s ease' }} />
         ))}
       </div>

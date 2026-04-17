@@ -13,6 +13,14 @@ export default class BillingService {
     }
   }
 
+  async getMyBills() {
+    try {
+      return await this.billingRepository.getMine();
+    } catch (err) {
+      throw toAppError(err, 'Failed to load your bills');
+    }
+  }
+
   async getBillSummary() {
     try {
       return await this.billingRepository.getSummary();

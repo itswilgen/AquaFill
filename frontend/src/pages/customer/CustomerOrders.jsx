@@ -1,16 +1,14 @@
 import { useEffect, useState } from 'react';
 import CustomerLayout from '../../components/CustomerLayout';
-import { getOrdersByCustomer, createCustomerOrder, getInventoryItems, searchCustomers } from '../../services/api';
+import { getMyOrders, createCustomerOrder, getInventoryItems } from '../../services/api';
 import { StatusBadge } from './CustomerDashboard';
 
 export default function CustomerOrders() {
-  const user     = JSON.parse(localStorage.getItem('user') || '{}');
   const [orders,    setOrders]    = useState([]);
   const [items,     setItems]     = useState([]);
-  const [customer,  setCustomer]  = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [loading,   setLoading]   = useState(true);
-  const [form,      setForm]      = useState({ item_id: '', quantity: 1, delivery_date: '' });
+  const [form,      setForm]      = useState({ item_id: '', quantity: '1', delivery_date: '' });
   const [submitting, setSubmitting] = useState(false);
   const [success,   setSuccess]   = useState('');
   const [error,     setError]     = useState('');
@@ -18,15 +16,10 @@ export default function CustomerOrders() {
   useEffect(() => {
     async function load() {
       try {
-        const res = await searchCustomers(user.name || user.username || '');
-        const customers = res.data.data;
-        if (customers.length > 0) {
-          setCustomer(customers[0]);
-          const ordersRes = await getOrdersByCustomer(customers[0].id);
-          setOrders(ordersRes.data.data);
-        }
+        const ordersRes = await getMyOrders();
+        setOrders(ordersRes.data.data || []);
         const itemsRes = await getInventoryItems();
-        setItems(itemsRes.data.data);
+        setItems(itemsRes.data.data || []);
       } catch { }
       finally { setLoading(false); }
     }
@@ -34,27 +27,33 @@ export default function CustomerOrders() {
   }, []);
 
   const selectedItem = items.find(i => i.id === Number(form.item_id));
-  const pricePerUnit = selectedItem ? (selectedItem.item_name.includes('gallon') ? 50 : selectedItem.item_name.includes('500') ? 15 : 25) : 0;
-  const totalAmount  = pricePerUnit * form.quantity;
+  const pricePerUnit = getItemPrice(selectedItem?.item_name);
+  const quantityValue = Number.parseInt(form.quantity, 10);
+  const safeQuantity = Number.isInteger(quantityValue) && quantityValue > 0 ? quantityValue : 0;
+  const totalAmount  = pricePerUnit * safeQuantity;
 
   async function handleOrder(e) {
     e.preventDefault();
-    if (!customer) return setError('Customer profile not found. Please contact support.');
     if (!form.item_id) return setError('Please select a product.');
+    if (!pricePerUnit) {
+      return setError('Selected product has no configured customer price yet. Please contact support.');
+    }
+    if (!safeQuantity || safeQuantity < 1 || safeQuantity > 20) {
+      return setError('Quantity must be between 1 and 20.');
+    }
     setSubmitting(true);
     setError('');
     try {
       await createCustomerOrder({
-        customer_id:   customer.id,
-        quantity:      form.quantity,
+        item_id:       Number(form.item_id),
+        quantity:      safeQuantity,
         delivery_date: form.delivery_date,
-        amount:        totalAmount,
       });
       setSuccess('Order placed successfully!');
       setShowModal(false);
-      setForm({ item_id: '', quantity: 1, delivery_date: '' });
-      const ordersRes = await getOrdersByCustomer(customer.id);
-      setOrders(ordersRes.data.data);
+      setForm({ item_id: '', quantity: '1', delivery_date: '' });
+      const ordersRes = await getMyOrders();
+      setOrders(ordersRes.data.data || []);
       setTimeout(() => setSuccess(''), 3000);
     } catch {
       setError('Failed to place order. Please try again.');
@@ -88,6 +87,7 @@ export default function CustomerOrders() {
           <table style={s.table}>
             <thead>
               <tr style={s.thead}>
+                <th style={s.th}>Product</th>
                 <th style={s.th}>Qty</th>
                 <th style={s.th}>Status</th>
                 <th style={s.th}>Amount</th>
@@ -99,6 +99,7 @@ export default function CustomerOrders() {
             <tbody>
               {orders.map(o => (
                 <tr key={o.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <td style={s.td}>{o.item_name || '—'}</td>
                   <td style={s.td}>{o.quantity}</td>
                   <td style={s.td}><StatusBadge status={o.status} /></td>
                   <td style={s.td}>₱{Number(o.amount || 0).toFixed(2)}</td>
@@ -128,15 +129,29 @@ export default function CustomerOrders() {
                 onChange={e => setForm({ ...form, item_id: e.target.value })}>
                 <option value="">Choose a product...</option>
                 {items.map(item => (
-                  <option key={item.id} value={item.id}>
-                    {item.item_name} — {item.quantity > 0 ? `${item.quantity} in stock` : 'Out of stock'}
+                  <option
+                    key={item.id}
+                    value={item.id}
+                    disabled={!isRefillItem(item.item_name) && Number(item.quantity || 0) <= 0}
+                  >
+                    {item.item_name} — {getAvailabilityLabel(item)}
                   </option>
                 ))}
               </select>
 
               <label style={s.label}>Quantity *</label>
               <input style={s.input} type="number" min="1" max="20" value={form.quantity}
-                onChange={e => setForm({ ...form, quantity: Number(e.target.value) })} />
+                onChange={e => {
+                  const value = e.target.value;
+                  if (value === '') {
+                    setForm({ ...form, quantity: '' });
+                    return;
+                  }
+
+                  const parsed = Number.parseInt(value, 10);
+                  if (Number.isNaN(parsed)) return;
+                  setForm({ ...form, quantity: String(Math.max(0, Math.min(20, parsed))) });
+                }} />
 
               <label style={s.label}>Preferred delivery date</label>
               <input style={s.input} type="date" value={form.delivery_date}
@@ -151,7 +166,7 @@ export default function CustomerOrders() {
                   </div>
                   <div style={s.summaryRow}>
                     <span>Quantity</span>
-                    <span>{form.quantity}</span>
+                    <span>{safeQuantity || '—'}</span>
                   </div>
                   <div style={{ ...s.summaryRow, fontWeight: 700, color: '#0ea5e9', borderTop: '1px solid #e0f2fe', paddingTop: 8, marginTop: 4 }}>
                     <span>Total amount</span>
@@ -200,3 +215,25 @@ const s = {
   submitBtn:  { flex: 1, padding: '11px 0', background: '#0ea5e9', color: '#fff', border: 'none', borderRadius: 10, fontWeight: 600, fontSize: 14, cursor: 'pointer' },
   cancelBtn:  { padding: '11px 20px', background: '#fff', color: '#64748b', border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 14, cursor: 'pointer' },
 };
+
+function getItemPrice(itemName) {
+  const label = String(itemName || '').toLowerCase();
+  if (!label) return 0;
+
+  if (label.includes('gallon')) return 50;
+  if (label.includes('1l') || label.includes('1 liter')) return 25;
+  if (label.includes('500')) return 15;
+  return 0;
+}
+
+function isRefillItem(itemName) {
+  return String(itemName || '').toLowerCase().includes('gallon');
+}
+
+function getAvailabilityLabel(item) {
+  const stock = Number(item?.quantity || 0);
+  if (isRefillItem(item?.item_name)) {
+    return stock > 0 ? `${stock} in stock` : 'Refill available';
+  }
+  return stock > 0 ? `${stock} in stock` : 'Out of stock';
+}

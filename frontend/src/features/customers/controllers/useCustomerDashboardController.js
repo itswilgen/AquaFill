@@ -14,7 +14,7 @@ export function useCustomerDashboardController(user) {
       setLoading(true);
       setError('');
       try {
-        const rows = await customerPortalService.getOrdersForSessionUser(user);
+        const rows = await customerPortalService.getOrdersForSessionUser();
         if (!mounted) return;
         setOrders(rows);
       } catch (err) {

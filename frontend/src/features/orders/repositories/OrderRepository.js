@@ -7,6 +7,10 @@ export default class OrderRepository {
     return this.apiClient.get('/orders');
   }
 
+  getMine() {
+    return this.apiClient.get('/orders/me');
+  }
+
   create(payload) {
     return this.apiClient.post('/orders', payload);
   }

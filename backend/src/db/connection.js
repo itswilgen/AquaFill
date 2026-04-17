@@ -25,25 +25,15 @@ const poolConfig = useSocket
       port: Number(process.env.DB_PORT || 3306),
     };
 
-console.log('Connecting with:', {
-  mode: useSocket ? 'socket' : 'tcp',
-  socketPath: poolConfig.socketPath || null,
-  host: poolConfig.host || null,
-  port: poolConfig.port || null,
-  user: process.env.DB_USER,
-  database: process.env.DB_NAME,
-});
-
 const pool = mysql.createPool(poolConfig);
 
 pool.getConnection()
   .then((conn) => {
-    console.log('MySQL connected successfully!');
+    console.log('MySQL connected successfully.');
     conn.release();
   })
   .catch((err) => {
     console.error('MySQL connection error:', err.message);
-    console.error('Full error:', err);
   });
 
 module.exports = pool;

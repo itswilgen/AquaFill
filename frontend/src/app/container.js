@@ -30,7 +30,7 @@ const billingRepository = new BillingRepository({ apiClient });
 const authService = new AuthService({ authRepository, authStore });
 const customerService = new CustomerService({ customerRepository });
 const orderService = new OrderService({ orderRepository });
-const customerPortalService = new CustomerPortalService({ customerService, orderService });
+const customerPortalService = new CustomerPortalService({ orderService });
 const inventoryService = new InventoryService({ inventoryRepository });
 const billingService = new BillingService({ billingRepository });
 

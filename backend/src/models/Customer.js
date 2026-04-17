@@ -38,6 +38,14 @@ class Customer {
     return rows[0];
   }
 
+  static async findManyByNameExact(name) {
+    const [rows] = await db.query(
+      'SELECT * FROM customers WHERE LOWER(name) = LOWER(?) ORDER BY id ASC',
+      [name]
+    );
+    return rows;
+  }
+
   static async update(id, name, address, phone) {
     await db.query(
       'UPDATE customers SET name = ?, address = ?, phone = ? WHERE id = ?',

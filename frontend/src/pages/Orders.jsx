@@ -180,6 +180,7 @@ export default function Orders() {
               <thead>
                 <tr style={styles.thead}>
                   <th style={styles.th}>Customer</th>
+                  <th style={styles.th}>Product</th>
                   <th style={styles.th}>Quantity</th>
                   <th style={styles.th}>Status</th>
                   {showDateColumns && <th style={styles.th}>Delivery date</th>}
@@ -190,7 +191,7 @@ export default function Orders() {
               <tbody>
                 {orders.length === 0 ? (
                   <tr>
-                    <td colSpan={showDateColumns ? 7 : 5} style={styles.empty}>No orders found</td>
+                    <td colSpan={showDateColumns ? 8 : 6} style={styles.empty}>No orders found</td>
                   </tr>
                 ) : pagedOrders.map((order, index) => (
                   <tr
@@ -199,6 +200,7 @@ export default function Orders() {
                     style={animateIn ? { animation: `adminFadeIn 0.32s ease ${0.12 + (index * 0.03)}s both` } : undefined}
                   >
                     <td style={styles.td}>{order.customer_name || `Customer #${order.customer_id}`}</td>
+                    <td style={styles.td}>{order.item_name || '—'}</td>
                     <td style={styles.td}>{order.quantity}</td>
                     <td style={styles.td}><StatusBadge status={order.status} /></td>
                     {showDateColumns && <td style={styles.td}>{order.delivery_date?.slice(0, 10) || '-'}</td>}

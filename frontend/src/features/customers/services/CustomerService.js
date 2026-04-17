@@ -13,6 +13,14 @@ export default class CustomerService {
     }
   }
 
+  async getMyProfile() {
+    try {
+      return await this.customerRepository.getMe();
+    } catch (err) {
+      throw toAppError(err, 'Failed to load customer profile');
+    }
+  }
+
   async getCustomer(id) {
     try {
       return await this.customerRepository.getById(id);
@@ -42,6 +50,14 @@ export default class CustomerService {
       return await this.customerRepository.update(id, payload);
     } catch (err) {
       throw toAppError(err, 'Failed to update customer');
+    }
+  }
+
+  async updateMyProfile(payload) {
+    try {
+      return await this.customerRepository.updateMe(payload);
+    } catch (err) {
+      throw toAppError(err, 'Failed to update customer profile');
     }
   }
 

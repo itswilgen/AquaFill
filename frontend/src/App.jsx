@@ -46,8 +46,13 @@ function RiderRoute({ children }) {
   return children;
 }
 
-function PrivateRoute({ children }) {
-  return isAuthenticated() ? children : <Navigate to="/login" />;
+function CustomerRoute({ children }) {
+  const user = getStoredUserSafe();
+  if (!isAuthenticated()) return <Navigate to="/login" />;
+  if (user.role !== 'customer') {
+    return <Navigate to={getRoleHomeRoute(user.role)} />;
+  }
+  return children;
 }
 
 export default function App() {
@@ -72,10 +77,10 @@ export default function App() {
             <Route path="/billing"   element={<AdminRoute><Billing /></AdminRoute>} />
             <Route path="/rider/dashboard" element={<RiderRoute><RiderDashboard /></RiderRoute>} />
 
-            <Route path="/customer/dashboard" element={<PrivateRoute><CustomerDashboard /></PrivateRoute>} />
-            <Route path="/customer/orders"    element={<PrivateRoute><CustomerOrders /></PrivateRoute>} />
-            <Route path="/customer/bills"     element={<PrivateRoute><CustomerBills /></PrivateRoute>} />
-            <Route path="/customer/profile"   element={<PrivateRoute><CustomerProfile /></PrivateRoute>} />
+            <Route path="/customer/dashboard" element={<CustomerRoute><CustomerDashboard /></CustomerRoute>} />
+            <Route path="/customer/orders"    element={<CustomerRoute><CustomerOrders /></CustomerRoute>} />
+            <Route path="/customer/bills"     element={<CustomerRoute><CustomerBills /></CustomerRoute>} />
+            <Route path="/customer/profile"   element={<CustomerRoute><CustomerProfile /></CustomerRoute>} />
 
             <Route path="*" element={<NotFound />} />
           </Routes>
